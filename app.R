@@ -183,6 +183,7 @@ server <- function(input, output, session) {
         } else {
             leafletProxy("household_map", data = vehicle) %>%
                 clearGroup(group = "range_select") %>%
+                clearControls() %>%
                 addPolygons(  
                         fillColor = ~pal_polygon(vehicle@data[, col_name]),
                         popup = ~paste0("<b>", StateCode, ":</b> ", col_name, "cars per house"),

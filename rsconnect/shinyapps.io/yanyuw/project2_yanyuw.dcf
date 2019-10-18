@@ -1,0 +1,12 @@
+name: project2_yanyuw
+title: project2_yanyuw
+username:
+account: yanyuw
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 1349372
+bundleId: 2512358
+url: https://yanyuw.shinyapps.io/project2_yanyuw/
+when: 1571421414.2158
+asMultiple: FALSE
+asStatic: FALSE

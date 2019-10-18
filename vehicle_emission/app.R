@@ -15,7 +15,9 @@ library(rgdal)
 library(rgeos)
 library(stringr)
 library(dplyr)
+library(ggplot2)
 library(plotly)
+library(tools)
 library(shinyjs)
 library(DT)
 library(readxl)
@@ -45,7 +47,7 @@ vehicle_ownership <- merge(vehicle_ownership, state_abbr, sort = FALSE, by.x = "
 geodata.load@data <- merge(geodata.load@data, vehicle_ownership, by.x = c("StateCode","City"), by.y =c("Code", "City"))
 
 # Read excel data of states CO2 emission
-emission_data <- read_excel("/Users/yvonne/Desktop/94880/project2_yanyuw/sectors_2016.xlsx", skip = 3)
+emission_data <- read_excel("../sectors_2016.xlsx", skip = 3)
 colnames(emission_data) <- c("State", "commercial_mmt", "electric_power_mmt", "residential_mmt", "industrial_mmt", "transportation_mmt", "total_mmt",
                  "commercial_share", "electric_power_share", "residential_share", "industrial_share", "transportation_share")
 emission_data$total_share <- 1
@@ -86,20 +88,24 @@ ui <- navbarPage("Vehicles And Emission Facts",
                               sidebarPanel(
                                   radioButtons(inputId = "result_type",
                                                label = "Select the Result Type:",
-                                               choices = c("Statisctical Values", "Shares"),
-                                               selected = "Statistical Values"),
-                                  checkboxGroupInput(inputId = "emission_type",
+                                               choices = c("Statisctical Values" = "mmt", "Shares" = "share"),
+                                               selected = "mmt"),
+                                  selectInput(inputId = "emission_type",
                                                      label = "Choose the Emission Source:",
-                                                     choices = c("Commercial", "Electric power", "Residential", "Industrial", "Transportation", "Total"),
-                                                     selected = "Total"),
+                                                     choices = c("Commercial" = "commercial", "Electric power" = "electric_power", "Residential" = "residential", "Industrial" = "industrial", "Transportation" = "transportation", "Total" = "total"),
+                                                     selected = "total"),
                                   sliderInput(inputId = "bin_num",
                                               label = "Number of bins in histogram (approximate):",
-                                              min = 5, max = nrow(), value = 20),
+                                              min = 5, max = nrow(emission_data)-2, value = 10, step = 5)
                               ),
                               mainPanel(
                                   tabsetPanel(
                                       tabPanel("Histogram", plotlyOutput("histogram")),
-                                      tabPanel("Bar Chart", plotlyOutput("horizontal_bar"))
+                                      tabPanel("Bar Chart", plotlyOutput("horizontal_bar")),
+                                      tabPanel("Table", dataTableOutput("test_table")),
+                                      useShinyjs(),
+                                      tags$style(type = "text/css", "#horizontal_bar {height: calc(80vh - 90px) !important;}
+                                                 #histogram {height: calc(70vh - 90px) !important;}")
                                       )
                                   )
                               )
@@ -210,7 +216,55 @@ server <- function(input, output, session) {
     )
     
     # Tab: Plots
-    
+    emission_sub <- reactive({
+        req(input$result_type)
+        type <- input$result_type
+        if (type == "mmt"){
+            emission_sub <- emission_data[-52:-53, 1:7]
+        }else{
+            emission_sub <- emission_data[-52:-53, -2:-7]
+        }
+        return(emission_sub)
+    })
+
+    emission_type_subset <- reactive({
+        req(input$result_type)
+        req(input$emission_type)
+        type_col <- paste(input$emission_type, input$result_type, sep = "_")
+        emission_type_subset <- emission_sub()[, type_col]
+        emission_type_subset <- cbind(emission_sub()[,1], emission_type_subset)
+        return(emission_type_subset)
+    })
+    output$test_table <- DT::renderDataTable(
+        DT::datatable(data = emission_type_subset(),
+                      rownames = FALSE
+        )
+    )
+    his_plot_title <- reactive({
+        if (input$result_type == "mmt"){
+            his_plot_title = "Million Metric tons of CO2"
+        }else{
+            his_plot_title = "Shares"
+        }
+    })
+    output$histogram <- renderPlotly({
+        ggplotly(
+            ggplot(data = emission_type_subset(), aes(x = emission_type_subset()[,2]), fill = '#8abaae') +
+                geom_histogram(bins = input$bin_num) + 
+                ggtitle(paste('Histogram of', his_plot_title(), "of", input$emission_type, sep = " ")) + 
+                theme(plot.title = element_text(hjust = 0.5)) + 
+                xlab(his_plot_title()), 
+            tooltip = 'text')
+    })
+    output$horizontal_bar <- renderPlotly({
+        ggplotly(
+            ggplot(data = emission_type_subset(), aes(x = emission_type_subset()$State, y = emission_type_subset()[, 2]), fill = "#50c878") + 
+                geom_bar(stat = "identity") + 
+                xlab("State") +
+                ylab(input$emission_type) + 
+                coord_flip(),
+            tooltip = 'text')
+    })
 }
 
 # Run the application 

@@ -106,7 +106,7 @@ ui <- navbarPage(theme = shinytheme("flatly"),
                                       tabPanel("Bar Chart", plotlyOutput("horizontal_bar")),
                                       tabPanel("Table", dataTableOutput("test_table")),
                                       useShinyjs(),
-                                      tags$style(type = "text/css", "#horizontal_bar {height: calc(80vh - 90px) !important;}
+                                      tags$style(type = "text/css", "#horizontal_bar {height: calc(100vh - 90px) !important;}
                                                  #histogram {height: calc(70vh - 90px) !important;}")
                                       )
                                   )
@@ -207,23 +207,23 @@ server <- function(input, output, session) {
                         group = "range_select")
             }
     })
-    # # show the datatable with new range
-    # output$data_table <- renderDataTable(
-    #     if(input$show_data){
-    #         datatable(data = vehicle_subdata()@data[,-3:-14], 
-    #                       options = list(pageLength = 10, scrollX = TRUE), 
-    #                       rownames = FALSE)
-    #     }
-    # )
-    # # allow users to download the complete, raw dataset
-    # output$downloadFile <- downloadHandler(
-    #     filename = function(){
-    #         paste("major_cities_vehicle_ownership.csv")
-    #     },
-    #     content = function(file){
-    #         write.csv(geodata.load@data, file, row.names = FALSE)
-    #     }
-    # )
+    # show the datatable with new range
+    output$data_table <- renderDataTable(
+        if(input$show_data){
+            datatable(data = vehicle_subdata()@data[,-3:-10],
+                          options = list(pageLength = 10, scrollX = TRUE),
+                          rownames = FALSE)
+        }
+    )
+    # allow users to download the complete, raw dataset
+    output$downloadFile <- downloadHandler(
+        filename = function(){
+            paste("major_cities_vehicle_ownership.csv")
+        },
+        content = function(file){
+            write.csv(geodata.load@data, file, row.names = FALSE)
+        }
+    )
     
     # Tab: Plots
     # get subset data
@@ -262,9 +262,8 @@ server <- function(input, output, session) {
             ggplot(data = emission_type_subset(), aes(x = emission_type_subset()[,2])) +
                 geom_histogram(bins = input$bin_num, fill = '#8abaae') + 
                 ggtitle(paste('Histogram of', his_plot_title(), "in", input$emission_type, sep = " ")) + 
-                theme(plot.title = element_text(hjust = 0.5)) + 
                 xlab(his_plot_title())+
-                ylab("Counts"),
+                ylab("Counts of states"),
             tooltip = 'text')
     })
     output$horizontal_bar <- renderPlotly({
